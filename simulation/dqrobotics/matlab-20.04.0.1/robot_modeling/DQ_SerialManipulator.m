@@ -277,6 +277,8 @@ classdef DQ_SerialManipulator < DQ_Kinematics
                 % and end-effector (constant) displacements.
                 J = hamiplus8(obj.reference_frame)*haminus8(obj.effector)*...
                     obj.raw_pose_jacobian(q);
+%                 J = haminus8(obj.effector)*...
+%                     obj.raw_pose_jacobian(q);
             end
         end
         

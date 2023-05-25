@@ -48,6 +48,7 @@ classdef YouBotVrepRobot < DQ_VrepRobot
     properties
         joint_names;
         base_frame_name;
+        wheel_names
     end
     
     properties (Constant)
@@ -84,6 +85,12 @@ classdef YouBotVrepRobot < DQ_VrepRobot
                 current_joint_name = {robot_label,'ArmJoint',int2str(i-1),robot_index};
                 obj.joint_names{i} = strjoin(current_joint_name,'');
             end
+            obj.wheel_names{1} = '/youBot/rollingJoint_rr';
+            obj.wheel_names{2} = '/youBot/rollingJoint_rl';
+            obj.wheel_names{3} = '/youBot/rollingJoint_fl';
+            obj.wheel_names{4} = '/youBot/rollingJoint_fr';
+            
+            
             obj.base_frame_name = robot_name;
         end
         
@@ -103,6 +110,18 @@ classdef YouBotVrepRobot < DQ_VrepRobot
             obj.vrep_interface.set_joint_positions(obj.joint_names,q(4:8));
             obj.vrep_interface.set_object_pose(obj.base_frame_name, pose * obj.adjust');
         end
+        
+        function send_q_to_vrep_wheel(obj,q)
+%             obj.vrep_interface.set_joint_positions(obj.wheel_names,q(1:4));
+            obj.vrep_interface.set_joint_target_positions(obj.wheel_names,q(1:4));
+        end
+        
+        function q = get_q_from_vrep_wheel(obj)
+            %% Obtains the joint configurations from VREP
+            base_arm_q = obj.vrep_interface.get_joint_positions(obj.wheel_names);
+            q = base_arm_q;
+        end
+        
         
         function q = get_q_from_vrep(obj)
             %% Obtains the joint configurations from VREP
@@ -163,6 +182,44 @@ classdef YouBotVrepRobot < DQ_VrepRobot
             effector = 1 + E_*0.5*0.3*k_;
             kin.set_effector(effector);
         end
+        
+        function V = kinematic_base(obj,wheel_v)
+            w1 = wheel_v(1);
+            w2 = wheel_v(2);
+            w3 = wheel_v(3);
+            w4 = wheel_v(4);
+            radius = 0.0475;
+            L1 = 0.3/2;
+            L2 = 0.47/2;
+            vx = radius/4 * (w1+w2+w3+w4);
+            vz = radius/4 * (w1-w2-w3+w4);
+            w0 = radius/4 *(-w1 + w2-w3+w4)/(L1+L2);
+            V = [vx,vz,w0];
+        end
+        
+        function wheel_u = inverse_kinematic_base(obj,vtx,vty,w)
+            width = 0.316;
+            length = 0.456;
+            radius = 0.05;
+%             radius = 1;
+            a = width/2;
+            b = length/2;
+            vx = vtx+w*b;
+            vy = vty+w*a;
+            v1 = vty-vtx+w*(a+b);
+            v2 = vty + vtx - w*(a+b);
+            v3 = vty - vtx - w*(a+b);
+            v4 = vty + vtx + w*(a+b);
+            w1 = v1/radius;
+            w2 = v2/radius;
+            w3 = v3/radius;
+            w4 = v4/radius;
+            wheel_u = [w1,w2,w3,w4];
+            
+            
+            
+        end
+            
         
     end
 end

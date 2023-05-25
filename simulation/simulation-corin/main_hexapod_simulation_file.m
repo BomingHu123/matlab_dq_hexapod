@@ -38,7 +38,7 @@ clc;
 % False if we don' want to show intermediate frames
 simulation_parameters.show_frames = false;
 % Total simulation time, in seconds.
-simulation_parameters.total_time = 40000;
+simulation_parameters.total_time =80;
 
 % The maximum radius that the manipulator will perform
 simulation_parameters.dispz = 0.001;
@@ -48,17 +48,43 @@ simulation_parameters.wd = 0.005;
 simulation_parameters.wn = 0.001;
 
 % vrep_hexapodscene_dqcontroller(simulation_parameters);
-vrep_hexapodscene_dqcontroller_without_constraint(simulation_parameters);
+% vrep_hexapodscene_dqcontroller_without_constraint(simulation_parameters);
+% vrep_hexapodscene_dqcontroller_without_constraint_test_jacobian(simulation_parameters);
+% vrep_hexapodscene_dqcontroller_constraint_test_jacobian(simulation_parameters)
+
+vrep_hexapodscene_dqcontroller_with_constraint(simulation_parameters);
+% vrep_hexapodscene_dqcontroller_dynamic_test(simulation_parameters);
+% vrep_hexapodscene_dqcontroller_with_constraint_2(simulation_parameters)
+% vrep_hexapodscene_dqcontroller_with_constraint_wall(simulation_parameters);
+% vrep_hexapodscene_dqcontroller_pseudoinverse(simulation_parameters)
 
 %% single leg kinematic test
 % [Foothold1_trans, Foothold2_trans, Foothold3_trans, Foothold4_trans, Foothold5_trans, Foothold6_trans,...
-%     Foothold1_matlab_trans,Foothold2_matlab_trans,Foothold3_matlab_trans,Foothold4_matlab_trans,...
-%     Foothold5_matlab_trans,Foothold6_matlab_trans,Body_copp_trans,Body_matlab_trans,Norm_of_error]= vrep_hexapodscene_single_leg_test(simulation_parameters)
+%     Foothold1_matlab_trans, Foothold2_matlab_trans, Foothold3_matlab_trans, Foothold4_matlab_trans,...
+%     Foothold5_matlab_trans, Foothold6_matlab_trans, Body_copp_trans, Body_matlab_trans, Norm_of_error] = vrep_hexapodscene_single_leg_test(simulation_parameters)
 
-%% whole body kinematic test
+% % whole body kinematic test
 % [Foothold1_to_foothold2_trans, Foothold2_to_foothold3_trans, Foothold3_to_foothold4_trans, Foothold4_to_foothold5_trans, Foothold5_to_foothold6_trans,...
-%     Foothold1_to_foothold2_matlab_trans,Foothold2_matlab_trans,Foothold3_matlab_trans,Foothold4_matlab_trans,...
-%     Foothold5_matlab_trans,Body_copp_trans,Body_matlab_trans,Norm_of_error]= vrep_hexapodscene_whole_body_test(simulation_parameters);
+%     Foothold1_to_foothold2_matlab_trans,Foothold2_to_foothold3_matlab_trans,Foothold3_to_foothold4_matlab_trans,Foothold4_to_foothold5_matlab_trans,...
+%     Foothold5_to_foothold6_matlab_trans,Body_copp_trans,Body_matlab_trans,Norm_of_error]= vrep_hexapodscene_whole_body_fkm_test(simulation_parameters);
+
+% % % whole body relative jacobian and fkm test 
+%  [Foothold1_to_foothold2_trans, Foothold1_to_foothold3_trans, Foothold1_to_foothold4_trans, Foothold1_to_foothold5_trans, Foothold1_to_foothold6_trans,...
+%     Foothold1_to_foothold2_matlab_trans,Foothold1_to_foothold3_matlab_trans,Foothold1_to_foothold4_matlab_trans,Foothold1_to_foothold5_matlab_trans,...
+%     Foothold1_to_foothold6_matlab_trans,Body_copp_trans,Body_matlab_trans,Norm_of_error]= vrep_hexapodscene_whole_body_relative_jacobian_test(simulation_parameters);
+% 
+% [Foothold1_to_foothold2_trans, Foothold2_to_foothold3_trans, Foothold3_to_foothold4_trans, Foothold4_to_foothold5_trans, Foothold5_to_foothold6_trans,...
+%     Foothold1_to_foothold2_matlab_trans, Foothold2_matlab_trans, Foothold3_matlab_trans, Foothold4_matlab_trans,...
+%     Foothold5_matlab_trans, Body_copp_trans, Body_matlab_trans, Norm_of_error] = vrep_hexapodscene_whole_body_test(simulation_parameters);
+
+% [Foothold1_to_foothold2_trans, Foothold2_to_foothold3_trans, Foothold3_to_foothold4_trans, Foothold4_to_foothold5_trans, Foothold5_to_foothold6_trans,...
+%     Foothold1_to_foothold2_matlab_trans, Foothold2_matlab_trans, Foothold3_matlab_trans, Foothold4_matlab_trans,...
+%     Foothold5_matlab_trans, Body_copp_trans, Body_matlab_trans, Norm_of_error] = vrep_hexapodscene_whole_body_test2(simulation_parameters);
+
+% [Foothold1_to_foothold2_trans, Foothold2_to_foothold3_trans, Foothold3_to_foothold4_trans, Foothold4_to_foothold5_trans, Foothold5_to_foothold6_trans,...
+%     Foothold1_to_foothold2_matlab_trans, Foothold2_matlab_trans, Foothold3_matlab_trans, Foothold4_matlab_trans,...
+%     Foothold5_matlab_trans, Body_copp_trans, Body_matlab_trans, Norm_of_error] = vrep_hexapodscene_whole_body_test_contraint_jacobian(simulation_parameters);
+
 %%
 % [Foothold1_trans,Foothold1_matlab_trans,Foothold1_rot,Foothold1_matlab_rot]=vrep_hexapodscene_demo(simulation_parameters);
 

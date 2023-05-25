@@ -141,6 +141,14 @@ classdef DQ_VrepInterface < handle
             end
         end
         
+        function synchronous(obj)
+            obj.vrep.simxSynchronous(obj.clientID,true);
+        end
+        
+        function synchronous_trigger(obj)
+            obj.vrep.simxSynchronousTrigger(obj.clientID);
+        end
+        
         %% Close
         function disconnect(obj)
             %% Disconnects from the V-REP remote API server
@@ -417,7 +425,9 @@ classdef DQ_VrepInterface < handle
             %% Set the joint target positions of a robot in V-REP. For joints that are in 'Force/Torque Mode' in V-REP
             %%  >> joint_names = {'redundantRob_joint1','redundantRob_joint2','redundantRob_joint3','redundantRob_joint4','redundantRob_joint5','redundantRob_joint6','redundantRob_joint7'};
             %%  >> vi.set_joint_target_positions(joint_names,[0 pi/2 0 pi/2 0 pi/2 0]);
-            
+%             if length(handles) >=22
+%                 handles = str2num(handles);
+%             end
             if nargin == 3
                 for joint_index=1:length(handles)
                     if isa(handles,'cell')
@@ -491,6 +501,14 @@ classdef DQ_VrepInterface < handle
                 thetas(joint_index) = double(tmp);
             end
         end
+        
+        function [v,w] = get_body_velocity_from_vrep(obj,handle)
+            [returnCode,v,w]= obj.vrep.simxGetObjectVelocity(obj.clientID, obj.handle_from_string_or_handle(handle), obj.OP_ONESHOT);
+%             [returnCode,v,w]= obj.vrep.simxGetObjectVelocity(obj.clientID, obj.handle_from_string_or_handle(handle), obj.OP_STREAMING);
+%             [returnCode,v,w]= obj.vrep.simxGetObjectVelocity(obj.clientID, obj.handle_from_string_or_handle(handle), obj.OP_BUFFER);
+        end 
+        
+      
         
     end
     

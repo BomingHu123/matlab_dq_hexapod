@@ -36,9 +36,9 @@ clc;
 
 
 % False if we don' want to show intermediate frames
-simulation_parameters.show_frames = true;
+simulation_parameters.show_frames = false;
 % Total simulation time, in seconds.
-simulation_parameters.total_time = 200;
+simulation_parameters.total_time = 10;
 
 % The maximum radius that the manipulator will perform
 simulation_parameters.dispz = 0.1;
@@ -47,7 +47,12 @@ simulation_parameters.wd = 0.5;
 % Occilation around the rotation axix
 simulation_parameters.wn = 0.1;
 
-vrep_scene_dqcontroller(simulation_parameters);
+% vrep_scene_dqcontroller(simulation_parameters);
+% vrep_scene_dqcontroller_dynamcis(simulation_parameters);
+vrep_scene_dqcontroller_test_jacobian(simulation_parameters);
+% vrep_scene_dqcontroller_demo(simulation_parameters);
+% vrep_LBR4p_dqcontroller_demo(simulation_parameters);
 % vrep_hexapodscene_demo(simulation_parameters);
+
 
 

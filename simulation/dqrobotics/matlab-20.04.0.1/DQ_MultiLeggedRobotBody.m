@@ -30,7 +30,8 @@ classdef DQ_MultiLeggedRobotBody < DQ_Kinematics
         chain;
         frame_bias;
         dim_configuration_space
-        reference_to_first_feethold
+        reference_to_reference_foothold
+        reference_foothold_number
     end
     methods
         function obj = DQ_MultiLeggedRobotBody(robot)
@@ -45,7 +46,7 @@ classdef DQ_MultiLeggedRobotBody < DQ_Kinematics
             p = 0;
             xd = r + E_*0.5*p*r;
             obj.frame_bias{1} = xd;
-% x = 0
+            % x = 0
         end
         
         function add(obj, new_chain,offset)
@@ -101,26 +102,32 @@ classdef DQ_MultiLeggedRobotBody < DQ_Kinematics
                 x = obj.reference_frame * obj.frame_bias{num_of_chain + 1} * raw_fkm(obj,q,num_of_chain,ith);
             elseif nargin == 3
                 if num_of_chain == 1
-                    first_cortch_to_first_feethold = raw_fkm_absolute(obj,q,1);
-                    x = obj.reference_to_first_feethold * first_cortch_to_first_feethold' * obj.frame_bias{2}';
-%                     x = obj.base_frame * obj.frame_bias{num_of_chain + 1} * raw_fkm_absolute(obj,q,num_of_chain);
+                    first_cortch_to_first_feethold = raw_fkm_absolute(obj,q);
+                    x = obj.reference_to_reference_foothold * first_cortch_to_first_feethold' * obj.frame_bias{2}';
+                    %                     x = obj.base_frame * obj.frame_bias{num_of_chain + 1} * raw_fkm_absolute(obj,q,num_of_chain);
                 else
-                    first_cortch_to_first_feethold = raw_fkm_absolute(obj,q,1);
-                    base = obj.reference_to_first_feethold * first_cortch_to_first_feethold' * obj.frame_bias{2}';
-                    x = base * obj.frame_bias{num_of_chain} * raw_fkm_absolute(obj,q,num_of_chain-1);
+                    first_cortch_to_first_feethold = raw_fkm_absolute(obj,q);
+                    base = obj.reference_to_reference_foothold * first_cortch_to_first_feethold' * obj.frame_bias{2}';
+                    x = base * obj.frame_bias{num_of_chain} * raw_fkm_absolute(obj,q);
                 end
             else
-                %                 x_absoulute_pose = obj.reference_frame * obj.frame_bias{1} * raw_fkm(obj,q,0);
                 first_cortch_to_first_feethold = raw_fkm_absolute(obj,q,1);
-                x_absoulute_pose = obj.reference_to_first_feethold * first_cortch_to_first_feethold' * obj.frame_bias{2}';
-%                 x_absoulute_pose = obj.reference_frame;
-                x_relative_pose_1 = raw_fkm_relative(obj,q,1);
-                x_relative_pose_2 = raw_fkm_relative(obj,q,2);
-                x_relative_pose_3 = raw_fkm_relative(obj,q,3);
-                x_relative_pose_4 = raw_fkm_relative(obj,q,4);
-                x_relative_pose_5 = raw_fkm_relative(obj,q,5);
+                x_absoulute_pose = obj.reference_to_reference_foothold * first_cortch_to_first_feethold' * obj.frame_bias{2}';
+                x_relative_pose_1 = raw_fkm_relative(obj,q,2,1);
+                x_relative_pose_2 = raw_fkm_relative(obj,q,3,1);
+                x_relative_pose_3 = raw_fkm_relative(obj,q,4,1);
+                x_relative_pose_4 = raw_fkm_relative(obj,q,5,1);
+                x_relative_pose_5 = raw_fkm_relative(obj,q,6,1);
+
+%                 first_cortch_to_first_feethold = raw_fkm_absolute(obj,q,2);
+%                 x_absoulute_pose = obj.reference_to_reference_foothold * first_cortch_to_first_feethold' * obj.frame_bias{3}';
+%                 x_relative_pose_1 = raw_fkm_relative(obj,q,1,2);
+%                 x_relative_pose_2 = raw_fkm_relative(obj,q,3,2);
+%                 x_relative_pose_3 = raw_fkm_relative(obj,q,4,2);
+%                 x_relative_pose_4 = raw_fkm_relative(obj,q,5,2);
+%                 x_relative_pose_5 = raw_fkm_relative(obj,q,6,2);
+                
                 x = [x_absoulute_pose,x_relative_pose_1,x_relative_pose_2,x_relative_pose_3,x_relative_pose_4,x_relative_pose_5];
-                %                 error('Need the num of chain');
             end
         end
         
@@ -215,49 +222,51 @@ classdef DQ_MultiLeggedRobotBody < DQ_Kinematics
             end
         end
         
-        function set_reference_to_first_feethold(obj, q)
+        function set_reference_to_reference_foothold(obj, q)
             %             Q = DQ(1);
             Q2 = q(9:11);
-%             reference = DQ(1);
+            %             reference = DQ(1);
             first_cortch_to_first_foothold = raw_fkm_absolute(obj,q,1);
-%             x_base_to_first_leg = obj.frame_bias{2}*obj.chain{2}.fkm(Q2);
+            %             x_base_to_first_leg = obj.frame_bias{2}*obj.chain{2}.fkm(Q2);
             x_base_to_first_leg = obj.frame_bias{2}*first_cortch_to_first_foothold;
             reference_to_first_leg = obj.base_frame * x_base_to_first_leg;
-
+            
             if is_unit(reference_to_first_leg)
-                obj.reference_to_first_feethold = reference_to_first_leg;
+                obj.reference_to_reference_foothold = reference_to_first_leg;
             else
                 error('The base frame must be a unit dual quaternion.');
             end
             %                         vector_from_ref_to_first_feethold = q(1:8);
             %                         reference_to_base = DQ(vector_from_ref_to_first_feethold);
-            %                         obj.reference_to_first_feethold = reference_to_base;
+            %                         obj.reference_to_reference_foothold = reference_to_base;
         end
         
-        function set_reference_to_first_feethold_vrep(obj, foothold1)
-             obj.reference_to_first_feethold = foothold1;
+        function set_reference_to_reference_foothold_vrep(obj, foothold1)
+            obj.reference_to_reference_foothold = foothold1;
+        end
+        
+        function set_reference_foothold_number(obj, num)
+            obj.reference_foothold_number = num;
         end
         
         function update_base_frame(obj,q)
             Q2 = q(9:11);
-%             reference = DQ(1);
+            %             reference = DQ(1);
             first_cortch_to_first_foothold = raw_fkm_absolute(obj,q,1);
-%             x_base_to_first_leg = obj.frame_bias{2}*obj.chain{2}.fkm(Q2);
+            %             x_base_to_first_leg = obj.frame_bias{2}*obj.chain{2}.fkm(Q2);
             x_base_to_first_leg = obj.frame_bias{2}*first_cortch_to_first_foothold;
-            obj.base_frame = obj.reference_to_first_feethold * x_base_to_first_leg';
+            obj.base_frame = obj.reference_to_reference_foothold * x_base_to_first_leg';
         end
         
-        function Trans_feethold1 = get_reference_to_first_feethold(obj)
-            Trans_feethold1 = obj.reference_to_first_feethold;
+        function Trans_feethold1 = get_reference_to_reference_foothold(obj)
+            Trans_feethold1 = obj.reference_to_reference_foothold;
         end
         
         
-        function x = raw_fkm_absolute(obj, q, num)
-            j = 9 + (num-1)*3;
-            dim = obj.chain{num+1}.get_dim_configuration_space();
-            Q = q(j : j + dim - 1);
-            %             Q = q(9:11);
-            x = obj.chain{2}.fkm(Q);
+        function x = raw_fkm_absolute(obj, q,serial_num_of_reference_leg)
+            Q = q(9+3*(serial_num_of_reference_leg-1) : 9 + 3*serial_num_of_reference_leg - 1);
+%             Q = q(9:11);
+            x = obj.chain{serial_num_of_reference_leg+1}.fkm(Q);
         end
         
         function x = raw_fkm_base(obj,q)
@@ -265,23 +274,43 @@ classdef DQ_MultiLeggedRobotBody < DQ_Kinematics
             x = DQ(Q);
         end
         
-        function x = raw_fkm_relative(obj, q, num)
-            if (num > 5)
+        function x = raw_fkm_relative(obj, q, num,serial_num_of_reference_leg)
+            if (num > 6)
+                error('out of the number of relative dual postion');
+            end
+            if (num == serial_num_of_reference_leg)
+                error('the num of relative leg could be the serial num of reference leg');
+            end
+            Q1 = q(9+3*(serial_num_of_reference_leg-1) : 9 + 3*serial_num_of_reference_leg - 1);
+            Q2 = q(9+3*(num-1) : 9 + 3*num - 1);
+            
+            
+            x_base_to_leg1 = obj.frame_bias{serial_num_of_reference_leg+1}*obj.chain{serial_num_of_reference_leg+1}.fkm(Q1);
+            x_base_to_leg_iplus1 = obj.frame_bias{num+1}*obj.chain{num+1}.fkm(Q2);
+            x_leg_iplus1_to_leg1 = x_base_to_leg_iplus1'* x_base_to_leg1;
+            x_leg_1_to_iplus1 = x_leg_iplus1_to_leg1';
+            x = x_leg_1_to_iplus1;
+        end
+        
+        function x = raw_fkm_relative2(obj, q, num)
+            if (num > 6)
                 error('out of the number of relative dual postion');
             end
             x = DQ(1);
             j = 9 + (num-1)*3; % first configuration vector (q1)
             %             Q = zeros(1,2);
             if isa(obj.chain{num+1}, 'DQ_Kinematics')
-                dim = obj.chain{num+1}.get_dim_configuration_space();
-                Q1 = q(j : j + dim - 1);
-                j = j + dim;
-                dim = obj.chain{num+1}.get_dim_configuration_space();
-                Q2 = q(j : j + dim - 1);
+                %                 dim = obj.chain{num+1}.get_dim_configuration_space();
+                %                 Q1 = q(j : j + dim - 1);
+                %                 j = j + dim;
+                %                 dim = obj.chain{num+1}.get_dim_configuration_space();
+                %                 Q2 = q(j : j + dim - 1);
+                Q1 = q(9 : 11);
+                Q2 = q(8+3*(num-1) + 1: 8 + 3*(num));
             end
             
-            x_base_to_first_leg = obj.frame_bias{num+1}*obj.chain{num+1}.fkm(Q1);
-            x_base_to_second_leg = obj.frame_bias{num+2}*obj.chain{num+2}.fkm(Q2);
+            x_base_to_first_leg = obj.frame_bias{2}*obj.chain{2}.fkm(Q1);
+            x_base_to_second_leg = obj.frame_bias{num+1}*obj.chain{num+1}.fkm(Q2);
             x_second_leg_to_first_leg = x_base_to_second_leg'* x_base_to_first_leg;
             x = x_second_leg_to_first_leg;
         end
@@ -331,12 +360,14 @@ classdef DQ_MultiLeggedRobotBody < DQ_Kinematics
                 n = num_of_chain;
                 J = raw_pose_jacobian(obj,partial_chain,q,n,ith);
             else
-                J_absolute = raw_pose_jacobian_absolute(obj,q);
-                J_relative_1 = raw_pose_jacobian_relative(obj,q,1);
-                J_relative_2 = raw_pose_jacobian_relative(obj,q,2);
-                J_relative_3 = raw_pose_jacobian_relative(obj,q,3);
-                J_relative_4 = raw_pose_jacobian_relative(obj,q,4);
-                J_relative_5 = raw_pose_jacobian_relative(obj,q,5);
+                J_absolute = raw_pose_jacobian_absolute(obj,q,1);
+                J_relative_1 = raw_pose_jacobian_relative(obj,q,2,1);
+                J_relative_2 = raw_pose_jacobian_relative(obj,q,3,1);
+                J_relative_3 = raw_pose_jacobian_relative(obj,q,4,1);
+                J_relative_4 = raw_pose_jacobian_relative(obj,q,5,1);
+                J_relative_5 = raw_pose_jacobian_relative(obj,q,6,1);
+
+
                 J = zeros(48,26);
                 for i = 1:size(J_absolute,1)
                     for j = 1:size(J_absolute,2)
@@ -345,17 +376,125 @@ classdef DQ_MultiLeggedRobotBody < DQ_Kinematics
                 end
                 
                 for i = 1:8
-                    for j = 1:6
+                    for j = 4:6
                         J(8*1+i,5+3*1+j) = J_relative_1(i,j);
                         J(8*2+i,5+3*2+j) = J_relative_2(i,j);
                         J(8*3+i,5+3*3+j) = J_relative_3(i,j);
                         J(8*4+i,5+3*4+j) = J_relative_4(i,j);
                         J(8*5+i,5+3*5+j) = J_relative_5(i,j);
                     end
+                    for k =1:3
+                        J(8*1+i,8+k) = J_relative_1(i,k);
+                        J(8*2+i,8+k) = J_relative_2(i,k);
+                        J(8*3+i,8+k) = J_relative_3(i,k);
+                        J(8*4+i,8+k) = J_relative_4(i,k);
+                        J(8*5+i,8+k) = J_relative_5(i,k);
+                    end
+                end
+                
+%                 J_absolute = raw_pose_jacobian_absolute(obj,q,2);
+%                 J_relative_1 = raw_pose_jacobian_relative(obj,q,1,2);
+%                 J_relative_2 = raw_pose_jacobian_relative(obj,q,3,2);
+%                 J_relative_3 = raw_pose_jacobian_relative(obj,q,4,2);
+%                 J_relative_4 = raw_pose_jacobian_relative(obj,q,5,2);
+%                 J_relative_5 = raw_pose_jacobian_relative(obj,q,6,2);
+% 
+%                 J = zeros(48,26);
+%                 J(1:8,1:8) = J_absolute(:,1:8);
+%                 J(1:8,12:14) = J_absolute(:,9:11);
+%                 J(9:16,9:14) = J_relative_1;
+%                 J(17:24,12:17) = J_relative_2;
+%                 J(25:32,12:14) = J_relative_3(:,1:3);
+%                 J(25:32,18:20) = J_relative_3(:,4:6);
+%                 J(33:40,12:14) = J_relative_4(:,1:3);
+%                 J(33:40,21:23) = J_relative_4(:,4:6);
+%                 J(41:48,12:14) = J_relative_5(:,1:3);
+%                 J(41:48,24:26) = J_relative_5(:,4:6);
+                
+                
+                %                 J = [J_absolute,J_relative_1,J_relative_2,J_relative_3,J_relative_4,J_relative_5];
+            end
+        end
+        
+        function J = pose_jacobian_relative_translation(obj,q,num_of_chain,ith)
+            % Returns the whole-body pose Jacobian.
+            %
+            % J = POSE_JACOBIAN(q) receives the configuration vector q of the whole
+            % kinematic chain and returns the jacobian matrix J that satisfies
+            % vec8(xdot) = J * q_dot, where q_dot is the configuration velocity
+            % and xdot is the time derivative of the unit dual quaternion that
+            % represents the end-effector pose.
+            % J = POSE_JACOBIAN(q, num_of_chain) calculates the Jacobian up to the num_of_chain
+            % kinematic chain.
+            % J = POSE_JACOBIAN(q, num_of_chain,ith) calculates the Jacobian up to the
+            % ith link of the num_of_chain kinematic chain.
+            
+            
+            partial_chain = false;
+            if nargin > 4
+                error('Invalid number of parameters')
+            elseif nargin == 4
+                % find the Jacobian up to the jth link of the ith
+                % intermediate kinematic chain
+                partial_chain = true;
+                n = num_of_chain;
+                J = raw_pose_jacobian(obj,partial_chain,q,n,ith);
+            elseif nargin == 3
+                % find the Jacobian up to the ith intermediate kinematic
+                % chain
+                n = num_of_chain;
+                J = raw_pose_jacobian(obj,partial_chain,q,n,ith);
+            else
+                J_absolute = raw_pose_jacobian_absolute(obj,q,1);
+                J_relative_1 = raw_pose_jacobian_relative(obj,q,2,1);
+                J_relative_2 = raw_pose_jacobian_relative(obj,q,3,1);
+                J_relative_3 = raw_pose_jacobian_relative(obj,q,4,1);
+                J_relative_4 = raw_pose_jacobian_relative(obj,q,5,1);
+                J_relative_5 = raw_pose_jacobian_relative(obj,q,6,1);
+                
+                task_pose = fkm(obj,q);
+                Jp_r1 = translation_jacobian_MB(J_relative_1,task_pose(2));
+                Jp_r2 = translation_jacobian_MB(J_relative_2,task_pose(3));
+                Jp_r3 = translation_jacobian_MB(J_relative_3,task_pose(4));
+                Jp_r4 = translation_jacobian_MB(J_relative_4,task_pose(5));
+                Jp_r5 = translation_jacobian_MB(J_relative_5,task_pose(6));
+                
+                
+                
+                %                 J_relative_1 = raw_pose_jacobian_relative2(obj,q,2);
+                %                 J_relative_2 = raw_pose_jacobian_relative2(obj,q,3);
+                %                 J_relative_3 = raw_pose_jacobian_relative2(obj,q,4);
+                %                 J_relative_4 = raw_pose_jacobian_relative2(obj,q,5);
+                %                 J_relative_5 = raw_pose_jacobian_relative2(obj,q,6);
+                J = zeros(28,26);
+                J(1:8,1:11) = J_absolute;
+
+                
+                for i = 1:4
+                    for j = 4:6
+                        J(8*1+i,5+3*1+j) = Jp_r1(i,j);
+                        J(8+4*1+i,5+3*2+j) = Jp_r2(i,j);
+                        J(8+4*2+i,5+3*3+j) = Jp_r3(i,j);
+                        J(8+4*3+i,5+3*4+j) = Jp_r4(i,j);
+                        J(8+4*4+i,5+3*5+j) = Jp_r5(i,j);
+                    end
+                    for k =1:3
+                        J(8*1+i,8+k) = Jp_r1(i,k);
+                        J(8+4*1+i,8+k) = Jp_r2(i,k);
+                        J(8+4*2+i,8+k) = Jp_r3(i,k);
+                        J(8+4*3+i,8+k) = Jp_r4(i,k);
+                        J(8+4*4+i,8+k) = Jp_r5(i,k);
+                    end
                 end
                 
                 %                 J = [J_absolute,J_relative_1,J_relative_2,J_relative_3,J_relative_4,J_relative_5];
             end
+        end
+        
+        function J = pose_jacobian_test(obj,q,ref2base)
+            q1 = q(9:11);
+            J1 = obj.chain{2}.pose_jacobian(q1);
+            J = hamiplus8(ref2base*obj.frame_bias{2})*J1;
         end
         
         
@@ -402,29 +541,74 @@ classdef DQ_MultiLeggedRobotBody < DQ_Kinematics
             J = cell2mat(L);
         end
         
-        function J = raw_pose_jacobian_relative(obj,q,num)
-            if (num > 5)
+        function J = raw_pose_jacobian_relative(obj,q,num,serial_num_of_reference_leg)
+            if (num > 6)
+                error('out of the number of relative dual postion');
+            end
+            if (num == serial_num_of_reference_leg)
+                error('the num of relative leg could be the serial num of reference leg');
+            end
+            x = DQ(1);
+            j =1; % first configuration vector (q1)
+            %             Q = zeros(1,2);
+            if isa(obj.chain{num+1}, 'DQ_Kinematics')
+                %                 dim = obj.chain{num+1}.get_dim_configuration_space();
+                %                 Q1 = q(j : j + dim - 1);
+                %                 j = j + dim;
+                %                 dim = obj.chain{num+1}.get_dim_configuration_space();
+                %                 Q2 = q(j : j + dim - 1);
+                Q1 = q(9+3*(serial_num_of_reference_leg-1) : 9 + 3*serial_num_of_reference_leg - 1);
+                Q2 = q(9+3*(num-1) : 9 + 3*num - 1);
+%                 Q2 = q(8+3*num + 1: 8 + 3*(num+1));
+            else
+                error('wrong type')
+            end
+            x_crotch_iplus1_to_leg_iplus1 = obj.chain{num+1}.fkm(Q2);
+            x_crotch1_to_leg1 = obj.chain{serial_num_of_reference_leg+1}.fkm(Q1);
+            
+            x_1 = obj.frame_bias{serial_num_of_reference_leg+1}' * obj.frame_bias{num+1} * x_crotch_iplus1_to_leg_iplus1;
+            x_2 = x_crotch1_to_leg1'* obj.frame_bias{serial_num_of_reference_leg+1}'* obj.frame_bias{num+1};
+            J1 = haminus8(x_1) * (dualconj(obj,serial_num_of_reference_leg,Q1));
+            J2= hamiplus8(x_2)* obj.chain{num+1}.pose_jacobian(Q2);
+            if (num > serial_num_of_reference_leg)
+                J = [J1,J2];
+            elseif (num < serial_num_of_reference_leg)
+                J = [J2,J1];
+            end
+            
+%             x_1 = x_crotch_iplus1_to_leg_iplus1'* obj.frame_bias{num+2}' * obj.frame_bias{2};
+%             J1 = hamiplus8(x_1) * obj.chain{2}.pose_jacobian(Q1);
+%             x_2 = obj.frame_bias{num+2}' * obj.frame_bias{2} * x_crotch1_to_leg1;
+%             a = obj.chain{num+2}.pose_jacobian(Q2);
+%             J2= haminus8(x_2)*(dualconj(obj,num+1,Q2));
+%             J = [J1,J2];
+            %             J = cell2mat(L);
+            
+        end
+        
+        function J = raw_pose_jacobian_relative2(obj,q,num,serial_num_of_reference_leg)
+            if (num > 6)
                 error('out of the number of relative dual postion');
             end
             x = DQ(1);
             j =1; % first configuration vector (q1)
             %             Q = zeros(1,2);
             if isa(obj.chain{num+1}, 'DQ_Kinematics')
-%                 dim = obj.chain{num+1}.get_dim_configuration_space();
-%                 Q1 = q(j : j + dim - 1);
-%                 j = j + dim;
-%                 dim = obj.chain{num+1}.get_dim_configuration_space();
-%                 Q2 = q(j : j + dim - 1);
-                Q1 = q(8 + 3 * (num-1)+1 : 8+3*num);
-                Q2 = q(8+3*num + 1: 8 + 3*(num+1));
+                %                 dim = obj.chain{num+1}.get_dim_configuration_space();
+                %                 Q1 = q(j : j + dim - 1);
+                %                 j = j + dim;
+                %                 dim = obj.chain{num+1}.get_dim_configuration_space();
+                %                 Q2 = q(j : j + dim - 1);
+                Q1 = q(9 : 11);
+                Q2 = q(8+3*(num-1) + 1: 8 + 3*(num));
             else
                 error('wrong type')
             end
-            x_second_crotch_to_second_leg = obj.chain{num+2}.fkm(Q2);
-            x_first_crotch_to_first_leg = obj.chain{num+1}.fkm(Q1);
-            x_1 = x_second_crotch_to_second_leg'* obj.frame_bias{num+2}' * obj.frame_bias{num+1};
-            J1 = hamiplus8(x_1) * obj.chain{num+1}.pose_jacobian(Q1);
-            x_2 = obj.frame_bias{num+2}' * obj.frame_bias{num+1} * x_first_crotch_to_first_leg;
+            x_second_crotch_to_second_leg = obj.chain{num+1}.fkm(Q2);
+            x_first_crotch_to_first_leg = obj.chain{2}.fkm(Q1);
+            x_1 = x_second_crotch_to_second_leg'* obj.frame_bias{num+1}' * obj.frame_bias{2};
+            J1 = hamiplus8(x_1) * obj.chain{2}.pose_jacobian(Q1);
+            x_2 = obj.frame_bias{num+1}' * obj.frame_bias{2} * x_first_crotch_to_first_leg;
             a = obj.chain{num+1}.pose_jacobian(Q2);
             J2= haminus8(x_2)*(dualconj(obj,num,Q2));
             J = [J1,J2];
@@ -450,45 +634,34 @@ classdef DQ_MultiLeggedRobotBody < DQ_Kinematics
             end
         end
         
-        function J = raw_pose_jacobian_absolute(obj,q)
-            q1 = q(9:11);
-            first_cortch_to_first_feethold = raw_fkm_absolute(obj,q,1);
-            x_first_feethold_to_firstbase = first_cortch_to_first_feethold' * obj.frame_bias{2}';
-            x_ref_to_feethold1 = obj.reference_to_first_feethold;
-            J1 = haminus8(x_first_feethold_to_firstbase);
-            J2 = hamiplus8(x_ref_to_feethold1) * haminus8(conj(obj.frame_bias{2})) * dualconj(obj,1,q1);
-                
-%             x_first_crotch_to_first_leg = obj.chain{2}.fkm(q1);
-%             x_first_leg_to_first_crotch = conj(x_first_crotch_to_first_leg);
-%             x_1 = x_first_leg_to_first_crotch * conj(obj.frame_bias{2});
-%             J1 = haminus8(x_1);
-%             x_ref_to_base = obj.reference_frame * obj.frame_bias{1} * raw_fkm(obj,q,0);
-%             J2 = hamiplus8(x_ref_to_base) * haminus8(conj(obj.frame_bias{2})) * dualconj(obj,1,q1);
+        function J = raw_pose_jacobian_absolute(obj,q,serial_num_of_reference_leg)
+%             q1 = q(9:11);
+            q1 = q(9+3*(serial_num_of_reference_leg-1) : 9 + 3*serial_num_of_reference_leg - 1);
+            reference_cortch_to_reference_feethold = raw_fkm_absolute(obj,q,serial_num_of_reference_leg);
+            x_reference_feethold_to_base = reference_cortch_to_reference_feethold' * obj.frame_bias{serial_num_of_reference_leg+1}';
+            x_ref_to_feethold1 = obj.reference_to_reference_foothold;
+            J1 = haminus8(x_reference_feethold_to_base);
+            J2 = hamiplus8(x_ref_to_feethold1) * haminus8(conj(obj.frame_bias{serial_num_of_reference_leg+1})) * dualconj(obj,serial_num_of_reference_leg,q1);
+            
+            %             x_first_crotch_to_first_leg = obj.chain{2}.fkm(q1);
+            %             x_first_leg_to_first_crotch = conj(x_first_crotch_to_first_leg);
+            %             x_1 = x_first_leg_to_first_crotch * conj(obj.frame_bias{2});
+            %             J1 = haminus8(x_1);
+            %             x_ref_to_base = obj.reference_frame * obj.frame_bias{1} * raw_fkm(obj,q,0);
+            %             J2 = hamiplus8(x_ref_to_base) * haminus8(conj(obj.frame_bias{2})) * dualconj(obj,1,q1);
             J = [J1, J2];
         end
         
-        %         function [Q1, Q2] = get_dim_configuration_space_for_two_legs(obj,q,num)
-        %             j =1;
-        %             if isa(obj.chain{1}, 'DQ_Kinematics')
-        %                 dim = obj.chain{1}.get_dim_configuration_space();
-        %                 Q1 = q(j : j + dim - 1);
-        %                 j = j + dim;
-        %                 dim = obj.chain{num+1}.get_dim_configuration_space();
-        %                 Q2 = q(j : j + dim - 1);
-        %             else
-        %                 error('wrong type')
-        %             end
-        %         end
         
-        function [constraint_matrix,constraint_vector] = get_constraint_matrix_and_vector(obj,q,base_vec)
+        function [constraint_matrix,constraint_vector,J_whole] = get_constraint_matrix_and_vector(obj,q,base_vec)
             
             first_cortch_to_first_feethold = raw_fkm_absolute(obj,q,1);
-            x_ref_to_base = obj.reference_to_first_feethold * first_cortch_to_first_feethold' * obj.frame_bias{2}';
+            x_ref_to_base = obj.reference_to_reference_foothold * first_cortch_to_first_feethold' * obj.frame_bias{2}';
             %             J_trans = zeros(16,32);
             %             J_MN = zeros(32,26);
             
-            J_trans = zeros(24,48);
-            J_MN = zeros(48,26);
+            J_trans = zeros(18,48);
+            E = zeros(48,26);
             for i = 1:6
                 qi = q(6+3*i:8+3*i);
                 x_base_to_crotch_i = obj.frame_bias{i+1};
@@ -499,50 +672,94 @@ classdef DQ_MultiLeggedRobotBody < DQ_Kinematics
                 
                 J_trans_i = get_J_trans_matrix(x_ref_to_feet_i);
                 
+                I = zeros(3,4);
+                I(:,2:4)=eye(3);
+                
                 M_i = haminus8(x_base_to_feet_i);
                 N_i = hamiplus8(x_ref_to_crotch_i) * obj.chain{i+1}.pose_jacobian(qi);
                 
-                J_trans(4*i-3:4*i,8*i-7:8*i) = J_trans_i;
-                J_MN(8*i-7:8*i,1:8) = M_i;
-                J_MN(8*i-7:8*i,3*i+6:3*i+8) = N_i;
+                J_trans(3*i-2:3*i,8*i-7:8*i) = I * J_trans_i;
+                E(8*i-7:8*i,1:8) = M_i;
+                E(8*i-7:8*i,3*i+6:3*i+8) = N_i;
                 
-                
-                j1 = haminus8(x_base_to_feet_i);
-                %                 vec_ref_to_feet = j1 * vec8(base_vec);
-                %                 V(8*i-7:8*i) = -vec_ref_to_feet;
-                % V(8*i-7+8:8*i+8) = -vec_ref_to_feet;
             end
-            J_whole = 2 * J_trans * J_MN;
-%             constraint_vector = J_whole(5:24,1:8) * base_vec.q;
-%             constraint_matrix = J_whole(5:24,9:26);
+            J_whole = J_trans * E;
+            %             constraint_vector = J_whole(5:24,1:8) * base_vec.q;
+            %             constraint_matrix = J_whole(5:24,9:26);
             A = zeros(26,8);
-            B = zeros(26,8);
+            B = zeros(26,18);
             A(1:8,1:8) = eye(8);
-            B(9:26,9:26) = eye(18);
+            B(9:26,:) = eye(18);
             J_consb = J_whole * A;
             J_consu = J_whole * B;
             constraint_vector = -2* J_consb * vec8(base_vec);
             constraint_matrix = 2 * J_consu;
-            constraint_matrix = constraint_matrix(:,9:26);
+%             constraint_vector(1:3)= zeros(3,1);
+%             constraint_matrix(1:3,1:3)=zeros(3);
+%                         constraint_vector(4:18)= zeros(15,1);
+%                         constraint_matrix(4:18,4:18)=zeros(15);
+%                         
+%                         constraint_vector(1:18) = zeros(18,1);
+%                         constraint_matrix(1:18,1:18) = zeros(18);
         end
         
-        function V = get_constraint_vector(obj,q,base_vec)
-            V= zeros(1,48);
-            %             V = zeros(1,56);
-            %             for j = 1:8
-            %                 V(j) = 0;
-            %             end
-            for i = 1:6
+        function [constraint_matrix,constraint_vector] = get_constraint_matrix_and_vector_wall(obj,Jdist_plane,dist_plane,foothold1_vel)
+            J1 = Jdist_plane(1:8)*vec8(foothold1_vel);
+            J2 = Jdist_plane(9:11);
+            constraint_vector = dist_plane-J1;
+            constraint_matrix = zeros(1,18);
+            constraint_matrix(1:3) = J2;
+
+
+        end
+        
+        function [constraint_matrix,constraint_vector] = get_constraint_matrix_and_vector2(obj,q,base_vec)
+            
+            first_cortch_to_first_feethold = raw_fkm_absolute(obj,q);
+            x_ref_to_base = obj.reference_to_reference_foothold * first_cortch_to_first_feethold' * obj.frame_bias{2}';
+            %             J_trans = zeros(16,32);
+            %             J_MN = zeros(32,26);
+            
+            J_trans = zeros(3,8);
+            E = zeros(8,11);
+            for i = 1:1
                 qi = q(6+3*i:8+3*i);
-                x_base_to_crotch = obj.frame_bias{i};
-                x_crotch_to_feet = obj.chain{i+1}.fkm(qi);
-                x_base_to_feet = x_base_to_crotch * x_crotch_to_feet;
-                j1 = haminus8(x_base_to_feet);
-                vec_ref_to_feet = j1 * vec8(base_vec);
-                V(8*i-7:8*i) = -vec_ref_to_feet;
-                a
-                %                 V(8*i-7+8:8*i+8) = -vec_ref_to_feet;
+                x_base_to_crotch_i = obj.frame_bias{i+1};
+                x_crotch_to_feet_i = obj.chain{i+1}.fkm(qi);
+                x_ref_to_crotch_i = x_ref_to_base*x_base_to_crotch_i;
+                x_ref_to_feet_i = x_ref_to_base * x_base_to_crotch_i * x_crotch_to_feet_i;
+                x_base_to_feet_i = x_base_to_crotch_i * x_crotch_to_feet_i;
+                
+                J_trans_i = get_J_trans_matrix(x_ref_to_feet_i);
+                
+                I = zeros(3,4);
+                I(:,2:4)=eye(3);
+                
+                M_i = haminus8(x_base_to_feet_i);
+                N_i = hamiplus8(x_ref_to_crotch_i) * obj.chain{i+1}.pose_jacobian(qi);
+                
+                J_trans(3*i-2:3*i,8*i-7:8*i) = I * J_trans_i;
+                E(8*i-7:8*i,1:8) = M_i;
+                E(8*i-7:8*i,3*i+6:3*i+8) = N_i;
+                
+                
+                %                 j1 = haminus8(x_base_to_feet_i);
+                %                 vec_ref_to_feet = j1 * vec8(base_vec);
+                %                 V(8*i-7:8*i) = -vec_ref_to_feet;
+                % V(8*i-7+8:8*i+8) = -vec_ref_to_feet;
             end
+            J_whole = 2 * J_trans * E;
+            %             constraint_vector = J_whole(5:24,1:8) * base_vec.q;
+            %             constraint_matrix = J_whole(5:24,9:26);
+            A = zeros(11,8);
+            B = zeros(11,3);
+            A(1:8,1:8) = eye(8);
+            B(9:11,:) = eye(3);
+            J_consb = J_whole * A;
+            J_consu = J_whole * B;
+            constraint_vector = -2* J_consb * vec8(base_vec);
+            constraint_matrix = 2 * J_consu;
+            %             constraint_matrix = constraint_matrix(:,9:26);
         end
         
         function [x_current_abs_pose,EBV] = get_estimated_base(obj,q,last_q, sampling_time)
@@ -557,14 +774,14 @@ classdef DQ_MultiLeggedRobotBody < DQ_Kinematics
                 %                     x = obj.reference_frame * obj.frame_bias{num_of_chain + 1} * raw_fkm_base(obj,q);
                 %                 end
             else
-%                 first_cortch_to_first_feethold_cur = raw_fkm_absolute(obj,q,1);
-%                 x_current_abs_pose = obj.reference_frame * obj.reference_to_first_feethold * first_cortch_to_first_feethold_cur' * obj.frame_bias{2}';
-
+                %                 first_cortch_to_first_feethold_cur = raw_fkm_absolute(obj,q,1);
+                %                 x_current_abs_pose = obj.reference_frame * obj.reference_to_reference_foothold * first_cortch_to_first_feethold_cur' * obj.frame_bias{2}';
+                
                 first_cortch_to_first_feethold_cur = raw_fkm_absolute(obj,q,1);
-                x_current_abs_pose = obj.reference_to_first_feethold * first_cortch_to_first_feethold_cur' * obj.frame_bias{2}';
-%                 debug_c =   obj.reference_to_first_feethold * obj.base_frame' * first_cortch_to_first_feethold_cur' * obj.frame_bias{2}'
+                x_current_abs_pose = obj.reference_to_reference_foothold * first_cortch_to_first_feethold_cur' * obj.frame_bias{2}';
+                %                 debug_c =   obj.reference_to_reference_foothold * obj.base_frame' * first_cortch_to_first_feethold_cur' * obj.frame_bias{2}'
                 x_last_abs_pose = DQ(last_q(1:8));
-           
+                
                 %     get the transformation dq from last pose to current pose
                 x_trans = x_last_abs_pose'* x_current_abs_pose;
                 EBV = (log(x_trans) * x_current_abs_pose) / sampling_time;
@@ -585,20 +802,20 @@ classdef DQ_MultiLeggedRobotBody < DQ_Kinematics
                     %                     plot(obj.chain{1},q(1:8));
                     
                     % % % % %            plot a plane base           % % % % % % % % % % % % % %
-%                     dq_pose = obj.fkm(q,0);
-%                     vec_trans = vec4(translation(dq_pose));
-%                     pos = vec_trans(2:4);
-%                     
-%                     current_base_frame1 = obj.fkm(q,0)* obj.frame_bias{2};
-%                     current_base_frame2 = obj.fkm(q,0)* obj.frame_bias{4};
-%                     current_base_frame3 = obj.fkm(q,0)* obj.frame_bias{6};
-%                     vec_trans1 = vec4(translation(current_base_frame1));
-%                     p1 = vec_trans1(2:4);
-%                     vec_trans2 = vec4(translation(current_base_frame2));
-%                     p2 = vec_trans2(2:4);
-%                     vec_trans3 = vec4(translation(current_base_frame3));
-%                     p3 = vec_trans3(2:4);
-%                     plot_line(p1, p2, p3,pos);                    
+                    %                     dq_pose = obj.fkm(q,0);
+                    %                     vec_trans = vec4(translation(dq_pose));
+                    %                     pos = vec_trans(2:4);
+                    %
+                    %                     current_base_frame1 = obj.fkm(q,0)* obj.frame_bias{2};
+                    %                     current_base_frame2 = obj.fkm(q,0)* obj.frame_bias{4};
+                    %                     current_base_frame3 = obj.fkm(q,0)* obj.frame_bias{6};
+                    %                     vec_trans1 = vec4(translation(current_base_frame1));
+                    %                     p1 = vec_trans1(2:4);
+                    %                     vec_trans2 = vec4(translation(current_base_frame2));
+                    %                     p2 = vec_trans2(2:4);
+                    %                     vec_trans3 = vec4(translation(current_base_frame3));
+                    %                     p3 = vec_trans3(2:4);
+                    %                     plot_line(p1, p2, p3,pos);
                     % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % %  % % % % %
                     
                     % % % % %            plot a circle base        % % % % % % % % % % % % % % %
@@ -666,7 +883,7 @@ classdef DQ_MultiLeggedRobotBody < DQ_Kinematics
                 % necessarily the same as the reference frame).
                 
                 current_base_frame = DQ(1)* obj.frame_bias{i};
-%                 current_base_frame = obj.fkm(q,0)* obj.frame_bias{i};
+                %                 current_base_frame = obj.fkm(q,0)* obj.frame_bias{i};
                 %                 end
                 
                 % Constant rigid transformations do not change the
@@ -696,7 +913,7 @@ classdef DQ_MultiLeggedRobotBody < DQ_Kinematics
             end
             
         end
-
+        
         %         function N_i = get_N_matrix(obj,dq1,qi,num)
         %             N_i = zeros(8,3);
         %             B = zeros(4,8);
@@ -716,9 +933,9 @@ end
 
 function J_trans_i = get_J_trans_matrix(x_ref_to_feet_i)
 J_trans_i = zeros(4,8);
-x_ref_to_feet_i_pure_part = x_ref_to_feet_i.P;
+x_ref_to_feet_i_primary_part = x_ref_to_feet_i.P;
 J_trans_i(:,1:4)= hamiplus4(x_ref_to_feet_i.D) * x_ref_to_feet_i.C4;
-J_trans_i(:,5:8)= haminus4(x_ref_to_feet_i_pure_part');
+J_trans_i(:,5:8)= haminus4(x_ref_to_feet_i_primary_part');
 end
 
 function drawCircle(rad,pos,n,color)
@@ -764,3 +981,16 @@ end
 %
 % end
 
+function Jp = translation_jacobian_MB(J_pose,x_pose)
+% Given the Jacobian 'J_pose' and the corresponding unit dual
+% quaternion 'x_pose' that satisfy vec8(x_pose_dot) = J_pose *
+% q_dot, TRANSLATION_JACOBIAN(J_pose,x_pose) returns the Jacobian
+% that satisfies the relation vec4(p_dot) = Jp * q_dot, where p_dot
+% is the time derivative of the translation quaternion p and q_dot
+% is the time derivative of the configuration vector
+if ~is_unit(x_pose)
+    error(['The second argument of translation_jacobian should be'...
+        ' a unit dual quaternion']);
+end
+Jp = 2*haminus4(x_pose.P')*J_pose(5:8,:)+2*hamiplus4(x_pose.D)*DQ.C4*J_pose(1:4,:);
+end

@@ -142,7 +142,8 @@ for t=0:sampling_time:total_time
     Body_copp_trans = [Body_copp_trans; body_copp_trans'];
     
     %% get information from Matlab
-    foothold1 = corin_hexapod.get_reference_joint1_from_vrep;
+%     foothold1 = corin_hexapod.get_reference_joint1_from_vrep;
+    foothold1 = vi.get_object_pose('/hexapod/footTip0');
 %     corin.set_reference_to_first_feethold(corin_q);
     corin.set_reference_to_first_feethold_vrep(foothold1);
     

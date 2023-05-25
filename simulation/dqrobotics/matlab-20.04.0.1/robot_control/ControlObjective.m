@@ -37,6 +37,6 @@
 classdef ControlObjective
     enumeration 
         Distance, DistanceToPlane, Line, None, Plane, Pose, Rotation,...
-            Translation, HexapodTask
+            Translation, HexapodTask, HexapodAbs, HexapodRel,HexapodTranslationTask,
     end
 end

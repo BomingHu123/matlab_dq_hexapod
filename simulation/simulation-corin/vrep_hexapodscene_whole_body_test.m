@@ -42,6 +42,7 @@ SHOW_FRAMES = simulation_parameters.show_frames;
 vi = DQ_VrepInterface;
 vi.disconnect_all(); % For testing, can be removed for release
 vi.connect('127.0.0.1',19997);
+vi.synchronous();
 vi.start_simulation();
 
 %% Initialize VREP Robots
@@ -70,34 +71,72 @@ total_time = simulation_parameters.total_time; % Total time, in seconds.
 %% constant
 include_namespace_dq
 
-Foothold1_to_foothold2_trans = [];
-Foothold2_to_foothold3_trans = [];
-Foothold3_to_foothold4_trans = [];
-Foothold4_to_foothold5_trans = [];
-Foothold5_to_foothold6_trans = [];
-Body_copp_trans = [];
+max_iterations = round(total_time/sampling_time);
 
-Foothold1_to_foothold2_matlab_trans = [];
-Foothold2_to_foothold3_matlab_trans = [];
-Foothold3_to_foothold4_matlab_trans = [];
-Foothold4_to_foothold5_matlab_trans = [];
-Foothold5_to_foothold6_matlab_trans = [];
-Body_matlab_trans = [];
+corin_tracking_error_norm = zeros(1,max_iterations);
+corin_control_inputs = zeros(corin.get_dim_configuration_space(),...
+    max_iterations);
+corin_q_vector = zeros(26, ...
+    max_iterations);
 
+Foothold1_to_foothold2_trans = zeros(3,max_iterations);
+Foothold2_to_foothold3_trans = zeros(3,max_iterations);
+Foothold3_to_foothold4_trans = zeros(3,max_iterations);
+Foothold4_to_foothold5_trans = zeros(3,max_iterations);
+Foothold5_to_foothold6_trans = zeros(3,max_iterations);
+Body_copp_trans = zeros(3,max_iterations);
+
+Foothold1_to_foothold2_matlab_trans = zeros(3,max_iterations);
+Foothold2_to_foothold3_matlab_trans = zeros(3,max_iterations);
+Foothold3_to_foothold4_matlab_trans = zeros(3,max_iterations);
+Foothold4_to_foothold5_matlab_trans = zeros(3,max_iterations);
+Foothold5_to_foothold6_matlab_trans = zeros(3,max_iterations);
+Body_matlab_trans = zeros(3,max_iterations);
+
+Vec_x_ref2base_dot_matlab = zeros(8,max_iterations);
+Vec_x_ref2base_dot = zeros(8,max_iterations);
+
+Vec_x_ref2foothold_dot_matlab = zeros(8,max_iterations);
+Vec_x_ref2foothold_dot = zeros(8,max_iterations);
+
+Vec_norm_error = zeros(1,max_iterations);
+
+Angular_velocity_foothold1 = zeros(3,max_iterations);
+Linear_velocity_foothold1 = zeros(3,max_iterations);
+Angular_velocity_foothold1_Vrep = zeros(3,max_iterations);
+Linear_velocity_foothold1_Vrep = zeros(3,max_iterations);
+Angular_velocity_body_Vrep = zeros(3,max_iterations);
+Linear_velocity_body_Vrep = zeros(3,max_iterations);
+
+current_corin_foothold1 = vi.get_object_pose('/hexapod/footTip0');
+last_corin_foothold1 = vi.get_object_pose('/hexapod/footTip0',-1,vi.OP_BLOCKING);
+current_corin_base = vi.get_object_pose('/hexapod');
+last_corin_base = vi.get_object_pose('/hexapod/body');
 Norm_of_error = [];
 
+corin_q = corin_hexapod.get_q_from_vrep();
+current_leg1_q = corin_q(1:3);
+last_leg1_q = corin_q(1:3);
+ii = 1;
+
+
+%     foothold1 = corin_hexapod.get_reference_feethold1_from_vrep;
+% %     corin.set_reference_to_first_feethold(corin_q);
+% 
+%     corin.set_reference_to_first_feethold_vrep(foothold1);
     a = 1;
 %% Control loop
 for t=0:sampling_time:total_time
     %% get information from CoppeliaSim
-    pause(0.05);
+    vi.synchronous_trigger();
+%     pause(0.05);
     
-    foothold1 = corin_hexapod.get_foothold1_pose_from_vrep();
-    foothold2 = corin_hexapod.get_foothold2_pose_from_vrep();
-    foothold3 = corin_hexapod.get_foothold3_pose_from_vrep();
-    foothold4 = corin_hexapod.get_foothold4_pose_from_vrep();
-    foothold5 = corin_hexapod.get_foothold5_pose_from_vrep();
-    foothold6 = corin_hexapod.get_foothold6_pose_from_vrep();
+    foothold1 = vi.get_object_pose('/hexapod/footTip0',-1,vi.OP_BLOCKING);
+    foothold2 = vi.get_object_pose('/hexapod/footTip1',-1,vi.OP_BLOCKING);
+    foothold3 = vi.get_object_pose('/hexapod/footTip2',-1,vi.OP_BLOCKING);
+    foothold4 = vi.get_object_pose('/hexapod/footTip3',-1,vi.OP_BLOCKING);
+    foothold5 = vi.get_object_pose('/hexapod/footTip4',-1,vi.OP_BLOCKING);
+    foothold6 = vi.get_object_pose('/hexapod/footTip5',-1,vi.OP_BLOCKING);
     body_copp = corin_hexapod.get_body_pose_from_vrep();
     
     foothold1_to_foothold2 = foothold2' * foothold1;
@@ -119,27 +158,25 @@ for t=0:sampling_time:total_time
     body_copp_trans4 = vec4(body_copp.translation);
     body_copp_trans = body_copp_trans4(2:4);
     
-    Foothold1_to_foothold2_trans = [Foothold1_to_foothold2_trans; foothold1_to_foothold2_trans'];
-    Foothold2_to_foothold3_trans = [Foothold2_to_foothold3_trans; foothold2_to_foothold3_trans'];
-    Foothold3_to_foothold4_trans = [Foothold3_to_foothold4_trans; foothold3_to_foothold4_trans'];
-    Foothold4_to_foothold5_trans = [Foothold4_to_foothold5_trans; foothold4_to_foothold5_trans'];
-    Foothold5_to_foothold6_trans = [Foothold5_to_foothold6_trans; foothold5_to_foothold6_trans'];
-    Body_copp_trans = [Body_copp_trans; body_copp_trans'];
+    
+    Foothold1_to_foothold2_trans(:,ii) = foothold1_to_foothold2_trans';
+    Foothold2_to_foothold3_trans(:,ii) = foothold2_to_foothold3_trans';
+    Foothold3_to_foothold4_trans(:,ii) = foothold3_to_foothold4_trans';
+    Foothold4_to_foothold5_trans(:,ii) = foothold4_to_foothold5_trans';
+    Foothold5_to_foothold6_trans(:,ii) = foothold5_to_foothold6_trans';
+    Body_copp_trans(:,ii) = body_copp_trans';
     
     %% get information from Matlab
-    foothold1 = corin_hexapod.get_reference_joint1_from_vrep;
+    foothold1 = vi.get_object_pose('/hexapod/footTip0',-1,vi.OP_BLOCKING);
+%     foothold1 = corin_hexapod.get_reference_feethold1_from_vrep;
 %     corin.set_reference_to_first_feethold(corin_q);
     corin.set_reference_to_first_feethold_vrep(foothold1);
     
     corin_q = corin_hexapod.get_q_from_vrep();
+    current_leg1_q = corin_q(9:11);
     
 %     body_matlab = corin.fkm(corin_q,1);
-    foothold1_matlab = corin.fkm(corin_q,2);
-    foothold2_matlab = corin.fkm(corin_q,3);
-    foothold3_matlab = corin.fkm(corin_q,4);
-    foothold4_matlab = corin.fkm(corin_q,5);
-    foothold5_matlab = corin.fkm(corin_q,6);
-    foothold6_matlab = corin.fkm(corin_q,7);
+
     
     matlab_fkm_res = corin.fkm(corin_q);
     body_matlab = matlab_fkm_res(1);
@@ -165,12 +202,12 @@ for t=0:sampling_time:total_time
     foothold5_to_foothold6_matlab_trans = foothold5_to_foothold6_matlab_trans4(2:4);
 
     
-    Body_matlab_trans = [Body_matlab_trans;body_matlab_trans'];
-    Foothold1_to_foothold2_matlab_trans = [Foothold1_to_foothold2_matlab_trans;foothold1_to_foothold2_matlab_trans'];
-    Foothold2_to_foothold3_matlab_trans = [Foothold2_to_foothold3_matlab_trans;foothold2_to_foothold3_matlab_trans'];
-    Foothold3_to_foothold4_matlab_trans = [Foothold3_to_foothold4_matlab_trans;foothold3_to_foothold4_matlab_trans'];
-    Foothold4_to_foothold5_matlab_trans = [Foothold4_to_foothold5_matlab_trans;foothold4_to_foothold5_matlab_trans'];
-    Foothold5_to_foothold6_matlab_trans = [Foothold5_to_foothold6_matlab_trans;foothold5_to_foothold6_matlab_trans'];
+    Foothold1_to_foothold2_matlab_trans(:,ii) = foothold1_to_foothold2_matlab_trans';
+    Foothold2_to_foothold3_matlab_trans(:,ii) = foothold2_to_foothold3_matlab_trans';
+    Foothold3_to_foothold4_matlab_trans(:,ii) = foothold3_to_foothold4_matlab_trans';
+    Foothold4_to_foothold5_matlab_trans(:,ii) = foothold4_to_foothold5_matlab_trans';
+    Foothold5_to_foothold6_matlab_trans(:,ii) = foothold5_to_foothold6_matlab_trans';
+    Body_matlab_trans(:,ii) = body_matlab_trans';
     
     Coppeliasim_data = [foothold1_to_foothold2,foothold2_to_foothold3,foothold3_to_foothold4,foothold4_to_foothold5,...
         foothold5_to_foothold6,body_copp];
@@ -198,8 +235,79 @@ for t=0:sampling_time:total_time
         task_error(8*(i-1) +1 :8*i) = one_task_error;
     end
     
+%     footTip0_velocity = compute_estimated_velocity(current_footTip0,last_footTip0,sampling_time);
+    
+    
     nor = norm(task_error);
     Norm_of_error = [Norm_of_error;nor];
+
+
+    
+%     if corin_q(8+1) <= 0.1
+%         corin_q(8+1) = corin_q(8+1) + 0.002;
+%     end
+%     if corin_q(8+2) <= 0
+%         corin_q(8+2) = corin_q(8+2) + 0.002;
+%     end
+%     if corin_q(8+3) >= 0
+%         corin_q(8+3) = corin_q(8+3) - 0.005;
+%     end
+
+
+
+
+    a = a+1;
+    
+    
+    %%
+    current_corin_foothold1 = vi.get_object_pose('/hexapod/footTip0',-1,vi.OP_BLOCKING);
+    current_corin_base = vi.get_object_pose('/hexapod/body',-1,vi.OP_BLOCKING);
+    [x_ref2f1_dot,angular_velocity_foothold1,linear_velocity_foothold1] = compute_estimated_velocity(current_corin_foothold1,last_corin_foothold1,sampling_time);
+    [x_ref2base_dot,~,~] = compute_estimated_velocity(current_corin_base,last_corin_base,sampling_time);
+    [linear_velocity_foothold1_vrep,angular_velocity_foothold1_vrep] = vi.get_body_velocity_from_vrep('/hexapod/footTip0');
+        [linear_velocity_body_vrep,angular_velocity_body_vrep] = vi.get_body_velocity_from_vrep('/hexapod');
+    
+    
+    Angular_velocity_foothold1(:,ii) = angular_velocity_foothold1;
+    Linear_velocity_foothold1(:,ii) = linear_velocity_foothold1;
+    Angular_velocity_foothold1_Vrep(:,ii) = angular_velocity_foothold1_vrep;
+    Linear_velocity_foothold1_Vrep(:,ii) = linear_velocity_foothold1_vrep;
+    Angular_velocity_body_Vrep(:,ii) = angular_velocity_body_vrep;
+Linear_velocity_body_Vrep(:,ii) = linear_velocity_body_vrep;
+    
+    matlab_jacobian = corin.pose_jacobian(corin_q);
+    matlab_jacobian_2 = corin.pose_jacobian_test(corin_q,current_corin_base);
+
+    jacobian_abs = matlab_jacobian(1:8,1:11);
+    
+    vec_x_ref2f1_dot = vec8(x_ref2f1_dot);
+    vec_abs = zeros(11,1);
+    vec_abs(1:8) = vec_x_ref2f1_dot;
+    leg1_q_dot = (current_leg1_q - last_leg1_q)/sampling_time;
+    vec_abs(9:11) = leg1_q_dot;
+    
+    vec_x_ref2base_dot_matlab = jacobian_abs * vec_abs; 
+    vec_x_ref2base_dot = vec8(x_ref2base_dot);
+    error = vec_x_ref2base_dot_matlab - vec_x_ref2base_dot;
+    
+    vec_x_ref2foothold1_dot_matlab = matlab_jacobian_2 * leg1_q_dot;
+    
+    Vec_x_ref2foothold_dot_matlab(:,ii) = vec_x_ref2foothold1_dot_matlab;
+    Vec_x_ref2foothold_dot(:,ii) = vec_x_ref2f1_dot;
+    
+    
+    Vec_norm_error(:,ii) = norm(error);
+    Vec_x_ref2base_dot_matlab(:,ii) = vec_x_ref2base_dot_matlab;
+    Vec_x_ref2base_dot(:,ii) = vec_x_ref2base_dot;
+%     
+%     DQ_vec_x_ref2base_dot_matlab = DQ(vec_x_ref2base_dot_matlab);
+%     estimated_velocity =0.5 * xi * current_pose;
+    
+    
+    if ii == 30
+        b =0;
+    end
+    %% Send desired values
     if a == 310
         b = 0;
     end
@@ -229,23 +337,13 @@ for t=0:sampling_time:total_time
     end
 
     
-%     if corin_q(8+1) <= 0.1
-%         corin_q(8+1) = corin_q(8+1) + 0.002;
-%     end
-%     if corin_q(8+2) <= 0
-%         corin_q(8+2) = corin_q(8+2) + 0.002;
-%     end
-%     if corin_q(8+3) >= 0
-%         corin_q(8+3) = corin_q(8+3) - 0.005;
-%     end
+%     corin_hexapod.send_q_to_vrep(corin_q(9:26));
+    corin_hexapod.send_target_joint_to_vrep(corin_q(9:26));
     
     
-
-    a = a+1;
-    
-    %% Send desired values
-    corin_hexapod.send_q_to_vrep(corin_q(9:26));
-    
+    last_corin_foothold1 = current_corin_foothold1;
+    last_corin_base = current_corin_base;
+    last_leg1_q = current_leg1_q;
     %% Show frames, for testing. This if (and the following else)
     % can be removed for release
     if SHOW_FRAMES
@@ -272,9 +370,271 @@ for t=0:sampling_time:total_time
 %         end
     end
     
+    %% get data to plot
+    
+    ii = ii + 1;
+    
     
 end
+T=0:sampling_time:total_time;
+figure(1)
+plot(T,Foothold1_to_foothold2_trans(1,:))
+hold on;
+plot(T,Foothold1_to_foothold2_trans(2,:))
+hold on;
+plot(T,Foothold1_to_foothold2_trans(3,:))
+hold on;
+plot(T,Foothold1_to_foothold2_matlab_trans(1,:),':')
+hold on;
+plot(T,Foothold1_to_foothold2_matlab_trans(2,:),':')
+hold on;
+plot(T,Foothold1_to_foothold2_matlab_trans(3,:),':')
+hold on;
+title('position')
+xlabel('Time/s') 
+ylabel('foothold 1 to 2 from vrep and matlab') 
+legend('vrep x','vrep y','vrep z',...
+    'matlab x','matlab y','matlab z');
 
+figure(2);
+plot(T,Vec_x_ref2base_dot_matlab(1,:))
+hold on;
+plot(T,Vec_x_ref2base_dot_matlab(2,:))
+hold on;
+plot(T,Vec_x_ref2base_dot_matlab(3,:))
+hold on;
+plot(T,Vec_x_ref2base_dot_matlab(4,:),':')
+hold on;
+plot(T,Vec_x_ref2base_dot_matlab(5,:),':')
+hold on;
+plot(T,Vec_x_ref2base_dot_matlab(6,:),':')
+hold on;
+plot(T,Vec_x_ref2base_dot_matlab(7,:),':')
+hold on;
+plot(T,Vec_x_ref2base_dot_matlab(8,:),':')
+hold on;
+title('position')
+xlabel('Time/s') 
+ylabel('foothold 1 to 2 from vrep and matlab') 
+% legend('vrep x','vrep y','vrep z',...
+%     'matlab x','matlab y','matlab z');
+
+figure(3)
+plot(T,Angular_velocity_foothold1(1,:))
+hold on;
+plot(T,Angular_velocity_foothold1(2,:))
+hold on;
+plot(T,Angular_velocity_foothold1(3,:))
+hold on;
+plot(T,Angular_velocity_foothold1_Vrep(1,:),':')
+hold on;
+plot(T,Angular_velocity_foothold1_Vrep(2,:),':')
+hold on;
+plot(T,Angular_velocity_foothold1_Vrep(3,:),':')
+hold on;
+title('angular velocity')
+xlabel('Time/s') 
+ylabel('Angular velocity foothold1') 
+legend('matlab rx','matlab ry','matlab rz',...
+    'vrep rx','vrep ry','vrep rz');
+
+figure(4)
+plot(T,Linear_velocity_foothold1(1,:))
+hold on;
+plot(T,Linear_velocity_foothold1(2,:))
+hold on;
+plot(T,Linear_velocity_foothold1(3,:))
+hold on;
+plot(T,Linear_velocity_foothold1_Vrep(1,:),':')
+hold on;
+plot(T,Linear_velocity_foothold1_Vrep(2,:),':')
+hold on;
+plot(T,Linear_velocity_foothold1_Vrep(3,:),':')
+hold on;
+title('linear velocity')
+xlabel('Time/s') 
+ylabel('foothold 1 to 2 from vrep and matlab') 
+legend('matlab x','matlab y','matlab z',...
+    'vrep x','vrep y','vrep z');
+
+figure(5)
+plot(T,Linear_velocity_body_Vrep(1,:),':')
+hold on;
+plot(T,Linear_velocity_body_Vrep(2,:),':')
+hold on;
+plot(T,Linear_velocity_body_Vrep(3,:),':')
+hold on;
+title('linear velocity')
+xlabel('Time/s') 
+ylabel('body from vrep and matlab') 
+legend('matlab x','matlab y','matlab z',...
+    'vrep x','vrep y','vrep z');
+
+figure(6);
+plot(T,Vec_x_ref2base_dot(1,:))
+hold on;
+plot(T,Vec_x_ref2base_dot_matlab(1,:),':')
+hold on;
+title('first value on the vector base dot')
+xlabel('Time/s') 
+ylabel('base dot (1) from vrep and matlab') 
+legend('base dot 1 vrep','base dot 1 matlab')
+
+figure(7);
+plot(T,Vec_x_ref2base_dot(2,:))
+hold on;
+plot(T,Vec_x_ref2base_dot_matlab(2,:),':')
+hold on;
+title('second value on the vector base dot')
+xlabel('Time/s') 
+ylabel('base dot (2) from vrep and matlab') 
+legend('base dot 2 vrep','base dot 2 matlab')
+
+figure(8);
+plot(T,Vec_x_ref2base_dot(3,:))
+hold on;
+plot(T,Vec_x_ref2base_dot_matlab(3,:),':')
+hold on;
+title('third value on the vector base dot')
+xlabel('Time/s') 
+ylabel('base dot (3) from vrep and matlab') 
+legend('base dot 3 vrep','base dot 3 matlab')
+
+figure(9);
+plot(T,Vec_x_ref2base_dot(4,:))
+hold on;
+plot(T,Vec_x_ref2base_dot_matlab(4,:),':')
+hold on;
+title('forth value on the vector base dot')
+xlabel('Time/s') 
+ylabel('base dot (4) from vrep and matlab') 
+legend('base dot 4 vrep','base dot 4 matlab')
+
+figure(10);
+plot(T,Vec_x_ref2base_dot(5,:))
+hold on;
+plot(T,Vec_x_ref2base_dot_matlab(5,:),':')
+hold on;
+title('fifth value on the vector base dot')
+xlabel('Time/s') 
+ylabel('base dot (5) from vrep and matlab') 
+legend('base dot 5 vrep','base dot 5 matlab')
+
+figure(11);
+plot(T,Vec_x_ref2base_dot(6,:))
+hold on;
+plot(T,Vec_x_ref2base_dot_matlab(6,:),':')
+hold on;
+title('sixth value on the vector base dot')
+xlabel('Time/s') 
+ylabel('base dot (6) from vrep and matlab') 
+legend('base dot 6 vrep','base dot 6 matlab')
+
+figure(12);
+plot(T,Vec_x_ref2base_dot(7,:))
+hold on;
+plot(T,Vec_x_ref2base_dot_matlab(7,:),':')
+hold on;
+title('seventh value on the vector base dot')
+xlabel('Time/s') 
+ylabel('base dot (7) from vrep and matlab') 
+legend('base dot 7 vrep','base dot 7 matlab')
+
+figure(13);
+plot(T,Vec_x_ref2base_dot(8,:))
+hold on;
+plot(T,Vec_x_ref2base_dot_matlab(8,:),':')
+hold on;
+title('eighth value on the vector base dot')
+xlabel('Time/s') 
+ylabel('base dot (8) from vrep and matlab') 
+legend('base dot 8 vrep','base dot 8 matlab')
+
+figure(14);
+plot(T,Vec_norm_error);
+title('norm of the error for xref2basedot on matlab and vrep')
+xlabel('Time/s') 
+
+%%
+% figure(6);
+% plot(T,Vec_x_ref2foothold_dot(1,:))
+% hold on;
+% plot(T,Vec_x_ref2foothold_dot_matlab(1,:),':')
+% hold on;
+% title('first value on the vector foothold1 dot')
+% xlabel('Time/s') 
+% ylabel('foothold1 dot (1) from vrep and matlab') 
+% legend('foothold1 dot 1 vrep','foothold1 dot 1 matlab')
+% 
+% figure(7);
+% plot(T,Vec_x_ref2foothold_dot(2,:))
+% hold on;
+% plot(T,Vec_x_ref2foothold_dot_matlab(2,:),':')
+% hold on;
+% title('second value on the vector foothold1 dot')
+% xlabel('Time/s') 
+% ylabel('foothold1 dot (2) from vrep and matlab') 
+% legend('foothold1 dot 2 vrep','foothold1 dot 2 matlab')
+% 
+% figure(8);
+% plot(T,Vec_x_ref2foothold_dot(3,:))
+% hold on;
+% plot(T,Vec_x_ref2foothold_dot_matlab(3,:),':')
+% hold on;
+% title('third value on the vector foothold1 dot')
+% xlabel('Time/s') 
+% ylabel('foothold1 dot (3) from vrep and matlab') 
+% legend('foothold1 dot 3 vrep','foothold1 dot 3 matlab')
+% 
+% figure(9);
+% plot(T,Vec_x_ref2foothold_dot(4,:))
+% hold on;
+% plot(T,Vec_x_ref2foothold_dot_matlab(4,:),':')
+% hold on;
+% title('forth value on the vector foothold1 dot')
+% xlabel('Time/s') 
+% ylabel('foothold1 dot (4) from vrep and matlab') 
+% legend('foothold1 dot 4 vrep','foothold1 dot 4 matlab')
+% 
+% figure(10);
+% plot(T,Vec_x_ref2foothold_dot(5,:))
+% hold on;
+% plot(T,Vec_x_ref2foothold_dot_matlab(5,:),':')
+% hold on;
+% title('fifth value on the vector foothold1 dot')
+% xlabel('Time/s') 
+% ylabel('foothold1 dot (5) from vrep and matlab') 
+% legend('foothold1 dot 5 vrep','foothold1 dot 5 matlab')
+% 
+% figure(11);
+% plot(T,Vec_x_ref2foothold_dot(6,:))
+% hold on;
+% plot(T,Vec_x_ref2foothold_dot_matlab(6,:),':')
+% hold on;
+% title('sixth value on the vector foothold1 dot')
+% xlabel('Time/s') 
+% ylabel('foothold1 dot (6) from vrep and matlab') 
+% legend('foothold1 dot 6 vrep','foothold1 dot 6 matlab')
+% 
+% figure(12);
+% plot(T,Vec_x_ref2foothold_dot(7,:))
+% hold on;
+% plot(T,Vec_x_ref2foothold_dot_matlab(7,:),':')
+% hold on;
+% title('seventh value on the vector base dot')
+% xlabel('Time/s') 
+% ylabel('foothold1 dot (7) from vrep and matlab') 
+% legend('foothold1 dot 7 vrep','foothold1 dot 7 matlab')
+% 
+% figure(13);
+% plot(T,Vec_x_ref2foothold_dot(8,:))
+% hold on;
+% plot(T,Vec_x_ref2foothold_dot_matlab(8,:),':')
+% hold on;
+% title('eighth value on the vector base dot')
+% xlabel('Time/s') 
+% ylabel('foothold1 dot (8) from vrep and matlab') 
+% legend('foothold1 dot 8 vrep','foothold1 dot 8 matlab')
 
 %% End V-REP
 vi.stop_simulation();
@@ -293,6 +653,31 @@ end
 end
 
 
+function [estimated_velocity,angular_velocity,linear_velocity] = compute_estimated_velocity(current_pose,last_pose,sampling_time)
 
+x_trans = last_pose'* current_pose;
+xi = 2*log(x_trans)/ sampling_time;
+xi = Ad(last_pose,xi);
+angular_velocity_DQ = xi.P;
+angular_velocity = vec3(angular_velocity_DQ);
+p = last_pose.translation;
+linear_velocity_DQ = xi.D-cross(p,angular_velocity);
+linear_velocity = vec3(linear_velocity_DQ);
+a = norm(angular_velocity);
+if a >4
+    b = 0
+end
 
+estimated_velocity =0.5* xi * current_pose;
+
+% x_trans =  last_pose' * current_pose;
+% kxi_1 = 2*log(x_trans)/ sampling_time;
+% kxi_2 = 2 * log(last_pose) /sampling_time
+% xi = kxi_2 + Ad(last_pose,kxi_1);
+% % kxi = Ad(last_pose,kxi_1);
+% angular_velocity_DQ = xi.P;
+% angular_velocity = vec3(angular_velocity_DQ);
+% linear_velocity = vec3(xi.D);
+% estimated_velocity =0.5 * xi * current_pose;
+end
 

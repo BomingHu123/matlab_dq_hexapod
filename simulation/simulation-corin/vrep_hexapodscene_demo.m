@@ -70,7 +70,7 @@ total_time = simulation_parameters.total_time; % Total time, in seconds.
 % lwr4_q  = [0; 1.7453e-01; 0; 1.5708e+00; 0; 2.6273e-01; 0];
 % corin_q = [0;0;0;    0;0;0;    0;0;0;     0;0;0;    0;0;0; 0;0;0];
 % corin_q = corin_hexapod.get_joint_from_vrep();
-corin_q = corin_hexapod.get_q_from_vrep()
+corin_q = corin_hexapod.get_q_from_vrep();
 % corin_hexapod.send_target_joint_to_vrep(corin_q);
 % Get current end-effector pose with respect to its own base
 

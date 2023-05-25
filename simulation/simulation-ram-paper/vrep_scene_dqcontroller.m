@@ -64,7 +64,7 @@ youbot_controller.set_control_objective(ControlObjective.Pose);
 youbot_controller.set_gain(10);
 youbot_controller.set_damping(0.01);
 
-sampling_time = 0.05; % V-REP's sampling time is 50 ms.
+sampling_time = 0.01; % V-REP's sampling time is 50 ms.
 total_time = simulation_parameters.total_time; % Total time, in seconds.
 
 %% Set the initial robots configurations
@@ -135,8 +135,10 @@ for t=0:sampling_time:total_time
     
     % since we are using V-REP just for visualization, integrate the
     % control signal to update the robots configurations
-    lwr4_q = lwr4_q + sampling_time*lwr4_u;
-    youbot_q = youbot_q + sampling_time*youbot_u;
+    lwr4_q = lwr4_q + sampling_time * lwr4_u;
+    youbot_q = youbot_q + sampling_time * youbot_u;
+    
+%     [linear_v,angular_w_vrep] = vi.get_body_velocity_from_vrep('/YouBot');
     
     %% Send desired values
     lwr4_vreprobot.send_q_to_vrep(lwr4_q);

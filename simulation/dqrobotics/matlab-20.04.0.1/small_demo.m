@@ -2,8 +2,8 @@
 % current_absolute_pose = vec8(current_absolute_pose_dq);
 
 include_namespace_dq
-r =cos(0) + k_*sin(0);
-p = 1*i_ + 0*j_ + 0*k_;
+r =cos(1) + k_*sin(1);
+p = 0*i_ + 0*j_ + 0*k_;
 a = r + E_*0.5*p*r;
 
 a = [1,1,0,0,0,0,0,1];

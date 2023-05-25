@@ -222,6 +222,9 @@ classdef DQ_KinematicController < handle
                 case ControlObjective.Translation
                     J = controller.robot.translation_jacobian(J_pose, x_pose);
                     
+                case ControlObjective.HexapodTask
+                    J = J_pose;
+                    
                 case ControlObjective.None
                     error(['Set the control objective by using the'
                         'set_control_objective() method']);
@@ -276,6 +279,13 @@ classdef DQ_KinematicController < handle
                     
                 case ControlObjective.Translation
                     task_variable = vec4(translation(x_pose));
+                    
+                case ControlObjective.HexapodTask
+                    task_variable = [];
+                    for i = 1 : 6
+                        task = vec8(x_pose(i));
+                        task_variable = [task_variable; task];
+                    end
                     
                 case ControlObjective.None
                     error(['Set the control objective by using the'
@@ -335,6 +345,8 @@ classdef DQ_KinematicController < handle
                     case {ControlObjective.Rotation, ...
                             ControlObjective.Translation}
                         controller.last_error_signal = zeros(4,1);
+                    case ControlObjective.HexapodTask
+                        controller.last_error_signal = zeros(48,1);
                 end
             else
                 error(['Only objectives enumerated in ControlObjective are '

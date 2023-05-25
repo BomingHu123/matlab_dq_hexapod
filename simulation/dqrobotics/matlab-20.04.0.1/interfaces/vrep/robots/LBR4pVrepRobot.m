@@ -91,14 +91,23 @@ classdef LBR4pVrepRobot < DQ_VrepRobot
             obj.vrep_interface.set_joint_positions(obj.joint_names,q)
         end
         
+        function send_target_joint_to_vrep(obj,q)
+            %             a = q(9:26);
+            %             obj.vrep_interface.set_joint_positions(obj.joint_names,q);
+            %               obj.vrep_interface.set_joint_positions(obj.joint_names,q)
+            obj.vrep_interface.set_joint_target_positions(obj.joint_names,q);
+%             a = DQ(q(1:8));
+%             obj.vrep_interface.set_object_pose('/hexapod', a);
+        end
+        
         function q = get_q_from_vrep(obj)
             %% Obtains the joint configurations from VREP
             %  >> vrep_robot = LBR4pVrepRobot("LBR4p", vi)
             %  >> q = vrep_robot.get_q_from_vrep(q)
-            q = obj.vrep_interface.get_joint_positions(obj.joint_names);
+            q = obj.vrep_interface.get_joint_positions(obj.joint_names,obj.vrep_interface.OP_BLOCKING);
         end
         
-                function q = get_object_pose_from_vrep1(obj)
+        function q = get_object_pose_from_vrep1(obj)
             q = obj.vrep_interface.get_object_pose('/LBR4p/LBR4p_joint2','/LBR4p/LBR4p_joint1',-1);
             while q == 0
                 q = obj.vrep_interface.get_object_pose('/LBR4p/LBR4p_joint2','/LBR4p/LBR4p_joint1',-1);

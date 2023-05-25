@@ -53,14 +53,18 @@ classdef DQ_ClassicQPController_Hexapod < DQ_TaskspaceQuadraticProgrammingContro
         function H = compute_objective_function_symmetric_matrix_hexapod(controller, ...
                 J, ~)
             % Compute the matrix H used in the objective function qdot'*H*qdot + f'*qdot
-            
-            H = J'*J ;
+            H = J'*J + controller.damping*eye(controller.robot.get_dim_configuration_space());
         end
         
         function f = compute_objective_function_linear_component_hexapod(controller,...
                 J, task_error,Ja,velocity_footTip0)
             % Compute the vector f used in the objective function qdot'*H*qdot + f'*qdot
-            f = J'*( controller.gain*task_error);
+%             gain = eye(28);
+%             for i = 1:8
+%                 gain(i,i) = 1;
+%             end
+            f = J'*((Ja * vec8(velocity_footTip0)) + controller.gain *task_error);
+%             f = J'*controller.gain*task_error;
         end
     end
 end

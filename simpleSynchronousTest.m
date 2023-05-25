@@ -32,7 +32,7 @@ function simpleSynchronousTest()
         % Now step a few times:
         for i=0:10
             disp('Press a key to step the simulation!');
-            pause;
+%             pause;
             sim.simxSynchronousTrigger(clientID);
         end
 
